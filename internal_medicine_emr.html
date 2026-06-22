@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نظام رعاية — العيادة الباطنية</title>
+<style>
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  :root{
+    --bg:#e9eef3; --panel:#ffffff; --ink:#10242f; --muted:#6a8294; --faint:#9bb0bd;
+    --line:#dbe6ed; --line2:#eef3f7;
+    --rail:#0c4a52; --rail2:#0a3d44; --teal:#0e7c86; --teal-d:#0b5e66;
+    --red:#d4495a; --amber:#d9912b; --green:#1f9c6a; --blue:#2f6fb0;
+    --shadow:0 1px 2px rgba(16,36,47,.06), 0 6px 18px rgba(16,36,47,.05);
+  }
+  html,body{ height:100%; }
+  body{
+    font-family:"Segoe UI","Tahoma",system-ui,"Helvetica Neue",Arial,sans-serif;
+    background:var(--bg); color:var(--ink); height:100vh; overflow:hidden;
+    display:flex; flex-direction:column; font-size:14px;
+  }
+  .num{ font-variant-numeric:tabular-nums; }
+
+  /* ===== top bar ===== */
+  .topbar{ flex:0 0 56px; background:var(--panel); border-bottom:1px solid var(--line);
+    display:flex; align-items:center; gap:18px; padding:0 18px; box-shadow:var(--shadow); z-index:5; }
+  .brand{ display:flex; align-items:center; gap:11px; }
+  .logo{ width:38px; height:38px; border-radius:10px; background:linear-gradient(135deg,var(--teal),var(--teal-d));
+    display:flex; align-items:center; justify-content:center; }
+  .logo svg{ width:22px; height:22px; stroke:#fff; fill:none; stroke-width:2; }
+  .brand .nm{ line-height:1.15; }
+  .brand .nm b{ font-size:15px; font-weight:700; }
+  .brand .nm span{ display:block; font-size:11px; color:var(--muted); }
+
+  .search{ flex:1; max-width:440px; position:relative; }
+  .search input{ width:100%; height:36px; border:1px solid var(--line); border-radius:9px; background:#f5f8fa;
+    padding:0 38px 0 12px; font-family:inherit; font-size:13px; color:var(--ink); outline:none; }
+  .search input:focus{ border-color:var(--teal); background:#fff; }
+  .search svg{ position:absolute; right:11px; top:9px; width:18px; height:18px; stroke:var(--faint); fill:none; stroke-width:2; }
+
+  .topright{ margin-inline-start:auto; display:flex; align-items:center; gap:18px; }
+  .clock{ text-align:left; line-height:1.2; }
+  .clock .t{ font-size:16px; font-weight:700; }
+  .clock .d{ font-size:11px; color:var(--muted); }
+  .doc{ display:flex; align-items:center; gap:10px; padding-inline-start:16px; border-inline-start:1px solid var(--line); }
+  .doc .av{ width:36px; height:36px; border-radius:50%; background:#cfe0e6; color:var(--teal-d);
+    display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; }
+  .doc .nm{ line-height:1.2; }
+  .doc .nm b{ font-size:13px; }
+  .doc .nm span{ display:block; font-size:11px; color:var(--muted); }
+  .tic{ width:34px; height:34px; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; position:relative; }
+  .tic:hover{ background:var(--line2); }
+  .tic svg{ width:20px; height:20px; stroke:var(--muted); fill:none; stroke-width:1.9; }
+  .tic .badge{ position:absolute; top:4px; right:5px; width:8px; height:8px; border-radius:50%; background:var(--red); border:2px solid #fff; }
+
+  /* ===== body ===== */
+  .body{ flex:1; display:flex; min-height:0; }
+
+  /* nav rail (right in RTL) */
+  .rail{ flex:0 0 78px; background:linear-gradient(180deg,var(--rail),var(--rail2)); display:flex; flex-direction:column;
+    align-items:center; padding:14px 0; gap:4px; }
+  .rail .ri{ width:60px; padding:10px 4px; border-radius:11px; display:flex; flex-direction:column; align-items:center; gap:5px;
+    color:#bfe0e3; cursor:pointer; font-size:10.5px; text-align:center; }
+  .rail .ri svg{ width:23px; height:23px; stroke:currentColor; fill:none; stroke-width:1.8; }
+  .rail .ri:hover{ background:rgba(255,255,255,.08); color:#fff; }
+  .rail .ri.active{ background:rgba(255,255,255,.16); color:#fff; }
+  .rail .sep{ flex:1; }
+
+  /* center chart */
+  .main{ flex:1; min-width:0; overflow-y:auto; padding:16px 18px; }
+  .crumbs{ font-size:12px; color:var(--muted); margin-bottom:12px; display:flex; align-items:center; gap:7px; }
+  .crumbs b{ color:var(--ink); font-weight:600; }
+
+  .pcard{ background:var(--panel); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; margin-bottom:14px; }
+  .phead{ display:flex; align-items:center; gap:16px; padding:16px 18px; }
+  .pphoto{ width:62px; height:62px; border-radius:14px; background:#d9e7eb; color:var(--teal-d);
+    display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:700; flex:0 0 62px; }
+  .pmeta{ flex:1; min-width:0; }
+  .pmeta .pn{ font-size:19px; font-weight:700; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .pill{ font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px; }
+  .pill.green{ background:#e3f5ec; color:#157a51; } .pill.blue{ background:#e6eff8; color:#2a5e96; }
+  .pill.amber{ background:#fbf0dd; color:#a86d16; } .pill.red{ background:#fbe6e9; color:#b13546; }
+  .pill.grey{ background:#eef3f7; color:#5d7382; }
+  .pdetails{ display:flex; flex-wrap:wrap; gap:6px 26px; margin-top:8px; font-size:12.5px; color:var(--muted); }
+  .pdetails b{ color:var(--ink); font-weight:600; }
+  .pactions{ display:flex; gap:8px; }
+  .btn{ height:36px; padding:0 15px; border-radius:9px; border:1px solid var(--line); background:#fff; color:var(--ink);
+    font-family:inherit; font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:7px; }
+  .btn svg{ width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:2; }
+  .btn.primary{ background:var(--teal); border-color:var(--teal); color:#fff; }
+  .btn.primary:hover{ background:var(--teal-d); }
+  .btn:hover{ background:var(--line2); }
+
+  .allergy{ background:#fcebed; border-top:1px solid #f4d3d8; color:#b13546; padding:9px 18px; font-size:13px; font-weight:600;
+    display:flex; align-items:center; gap:9px; }
+  .allergy svg{ width:18px; height:18px; stroke:#b13546; fill:none; stroke-width:2; }
+
+  .section{ background:var(--panel); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow); margin-bottom:14px; }
+  .shead{ display:flex; align-items:center; gap:9px; padding:13px 18px; border-bottom:1px solid var(--line2); }
+  .shead .ico{ width:30px; height:30px; border-radius:8px; background:#e7f1f2; display:flex; align-items:center; justify-content:center; }
+  .shead .ico svg{ width:17px; height:17px; stroke:var(--teal-d); fill:none; stroke-width:1.9; }
+  .shead h3{ font-size:14.5px; font-weight:700; }
+  .shead .meta{ margin-inline-start:auto; font-size:11.5px; color:var(--muted); }
+  .sbody{ padding:14px 18px; }
+
+  /* vitals */
+  .vgrid{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+  .vcard{ border:1px solid var(--line); border-radius:11px; padding:11px 12px; background:#fbfdfe; }
+  .vcard .vl{ font-size:11.5px; color:var(--muted); display:flex; align-items:center; gap:6px; }
+  .vcard .vl svg{ width:14px; height:14px; stroke:var(--teal); fill:none; stroke-width:2; }
+  .vcard .vv{ font-size:21px; font-weight:700; margin-top:3px; }
+  .vcard .vv small{ font-size:12px; font-weight:600; color:var(--muted); margin-inline-start:3px; }
+  .vcard .vv.hi{ color:var(--red); } .vcard .vv.lo{ color:var(--blue); }
+
+  /* lists / tables */
+  .row{ display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--line2); font-size:13.5px; }
+  .row:last-child{ border-bottom:0; }
+  .row .grow{ flex:1; min-width:0; }
+  .dx-code{ font-size:11.5px; color:var(--muted); }
+  table{ width:100%; border-collapse:collapse; font-size:13px; }
+  th,td{ text-align:right; padding:9px 10px; border-bottom:1px solid var(--line2); }
+  th{ font-size:11.5px; color:var(--muted); font-weight:600; background:#f7fafb; }
+  td.num{ font-weight:600; }
+  .flag{ font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; }
+  .flag.hi{ background:#fbe6e9; color:#b13546; } .flag.lo{ background:#e6eff8; color:#2a5e96; }
+  .flag.ok{ background:#e8f5ee; color:#1c7a51; }
+
+  textarea{ width:100%; min-height:92px; border:1px solid var(--line); border-radius:10px; padding:11px 12px;
+    font-family:inherit; font-size:13.5px; line-height:1.6; color:var(--ink); outline:none; resize:vertical; background:#fbfdfe; }
+  textarea:focus{ border-color:var(--teal); background:#fff; }
+  .signrow{ display:flex; align-items:center; justify-content:space-between; margin-top:10px; }
+  .signrow .who{ font-size:12px; color:var(--muted); }
+
+  /* queue (left) */
+  .queue{ flex:0 0 300px; background:var(--panel); border-inline-start:1px solid var(--line); display:flex; flex-direction:column; }
+  .qhead{ padding:14px 16px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:9px; }
+  .qhead h3{ font-size:14.5px; font-weight:700; }
+  .qhead .cnt{ margin-inline-start:auto; font-size:12px; color:#fff; background:var(--teal); padding:2px 9px; border-radius:20px; font-weight:700; }
+  .qlist{ flex:1; overflow-y:auto; padding:8px; }
+  .qitem{ display:flex; align-items:center; gap:11px; padding:10px; border-radius:11px; cursor:pointer; border:1px solid transparent; }
+  .qitem:hover{ background:#f5f9fa; }
+  .qitem.active{ background:#e7f3f3; border-color:#bfe0e0; }
+  .qtok{ width:40px; height:40px; border-radius:10px; background:#eef4f6; color:var(--teal-d); flex:0 0 40px;
+    display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px; }
+  .qitem.active .qtok{ background:var(--teal); color:#fff; }
+  .qinfo{ flex:1; min-width:0; }
+  .qinfo .qn{ font-size:13.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .qinfo .qsub{ font-size:11.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .qstat{ font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:20px; }
+  .qstat.now{ background:#e3f5ec; color:#157a51; } .qstat.wait{ background:#eef3f7; color:#6a8294; }
+  .qfoot{ padding:12px 14px; border-top:1px solid var(--line); }
+  .qfoot .btn{ width:100%; justify-content:center; }
+
+  @media (max-width:1100px){ .queue{ flex-basis:240px; } .vgrid{ grid-template-columns:repeat(3,1fr); } }
+  @media (max-width:860px){ .queue{ display:none; } .rail{ flex-basis:64px; } }
+</style>
+</head>
+<body>
+
+  <!-- top bar -->
+  <div class="topbar">
+    <div class="brand">
+      <div class="logo"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.6-9.2-9C1 8 3 4 7 4c2 0 3.5 1.2 5 3 1.5-1.8 3-3 5-3 4 0 6 4 4.2 8C19 16.4 12 21 12 21z"/><path d="M3 12h4l2-3 2 6 2-4 1.5 1H21"/></svg></div>
+      <div class="nm"><b>نظام رِعاية</b><span>السجل الطبي الإلكتروني</span></div>
+    </div>
+
+    <div class="search">
+      <input type="text" placeholder="بحث عن مريض بالاسم أو رقم الملف الطبي…">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+    </div>
+
+    <div class="topright">
+      <div class="tic" title="التنبيهات"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg><span class="badge"></span></div>
+      <div class="tic" title="الرسائل"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
+      <div class="clock"><div class="t num" id="clkT">—</div><div class="d" id="clkD">—</div></div>
+      <div class="doc">
+        <div class="av">س</div>
+        <div class="nm"><b>د. سارة العامري</b><span>استشاري الباطنة · العيادة 3</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="body">
+    <!-- nav rail -->
+    <div class="rail">
+      <div class="ri active"><svg viewBox="0 0 24 24"><path d="M4 13h6V4H4zM14 20h6v-9h-6zM14 8h6V4h-6zM4 20h6v-4H4z"/></svg>لوحة التحكم</div>
+      <div class="ri"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5 6-5s6 1.7 6 5"/><circle cx="18" cy="9" r="2.4"/><path d="M16.5 20c0-2.6 1-3.6 3.5-3.6"/></svg>المرضى</div>
+      <div class="ri"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>المواعيد</div>
+      <div class="ri"><svg viewBox="0 0 24 24"><path d="M14 3v5h5"/><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M9 13h6M9 17h6"/></svg>السجلات</div>
+      <div class="ri"><svg viewBox="0 0 24 24"><path d="M10 3v6l-4.5 8a2 2 0 001.8 3h9.4a2 2 0 001.8-3L14 9V3"/><path d="M8.5 3h7"/></svg>المختبر</div>
+      <div class="ri"><svg viewBox="0 0 24 24"><path d="M9 4h6l-1 5h3l-7 11 1.5-7H8z"/></svg>الأشعة</div>
+      <div class="ri"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>الوصفات</div>
+      <div class="sep"></div>
+      <div class="ri"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1.2l2-1.5-2-3.4-2.3 1a7 7 0 00-2-1.2L16.2 2H11.8l-.4 2.5a7 7 0 00-2 1.2l-2.3-1-2 3.4 2 1.5A7 7 0 005 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-1c.6.5 1.3.9 2 1.2l.4 2.5h4.4l.4-2.5c.7-.3 1.4-.7 2-1.2l2.3 1 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z"/></svg>الإعدادات</div>
+    </div>
+
+    <!-- main chart -->
+    <div class="main">
+      <div class="crumbs">العيادة الباطنية <span>›</span> طابور اليوم <span>›</span> <b id="crumbName">—</b></div>
+      <div id="chart"></div>
+    </div>
+
+    <!-- queue -->
+    <div class="queue">
+      <div class="qhead">
+        <h3>طابور الانتظار</h3>
+        <span class="cnt num" id="qCount">0</span>
+      </div>
+      <div class="qlist" id="qList"></div>
+      <div class="qfoot">
+        <button class="btn primary" onclick="nextPatient()">
+          <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          إنهاء الزيارة واستدعاء التالي
+        </button>
+      </div>
+    </div>
+  </div>
+
+<script>
+const TODAY = new Date();
+
+const patients = [
+  { id:0, tok:'B-11', name:'Rihab', gender:'أنثى', age:24, mrn:'1150392', blood:'A+', ins:'بوبا — ذهبي', phone:'05• ••• 6680',
+    appt:'09:00', complaint:'فحص دوري وتعب عام خفيف',
+    allergies:[],
+    vitals:{ bp:'116/74', hr:74, temp:'36.8', spo2:99, rr:15, weight:56, height:166 },
+    dx:[ {n:'فحص طبي دوري', c:'Z00.0', s:'روتيني', t:'green'} ],
+    meds:[ {n:'لا توجد أدوية موصوفة حالياً', d:'—', f:'—', dur:'—'} ],
+    labs:[ {n:'الهيموغلوبين (Hb)', v:'13.4', u:'g/dL', r:'12 – 15.5', f:'ok'},
+           {n:'كريات الدم البيضاء', v:'6.8', u:'10³/µL', r:'4 – 11', f:'ok'},
+           {n:'سكر صائم', v:'88', u:'mg/dL', r:'70 – 100', f:'ok'},
+           {n:'فيتامين د (25-OH)', v:'24', u:'ng/mL', r:'30 – 100', f:'lo'},
+           {n:'TSH', v:'1.9', u:'mIU/L', r:'0.4 – 4', f:'ok'} ],
+    note:'مراجعة لفحص دوري مع شكوى من تعب عام خفيف وقلة نوم. الفحص السريري طبيعي والعلامات الحيوية ضمن الحدود. التحاليل سليمة عدا نقص بسيط في فيتامين د. نصح بالراحة وتنظيم النوم ومكمّل فيتامين د، دون حاجة لعلاج آخر. لا توجد مؤشرات مرضية.' },
+
+  { id:1, tok:'B-12', name:'ريم القحطاني', gender:'أنثى', age:29, mrn:'1042857', blood:'O+', ins:'بوبا — ذهبي', phone:'05• ••• 4471',
+    appt:'09:20', complaint:'تعب عام ودوخة متكررة',
+    allergies:['البنسلين'],
+    vitals:{ bp:'108/68', hr:88, temp:'37.0', spo2:99, rr:16, weight:58, height:163 },
+    dx:[ {n:'فقر دم بعوز الحديد', c:'D50.9', s:'نشط', t:'amber'}, {n:'نقص فيتامين د', c:'E55.9', s:'مزمن', t:'grey'} ],
+    meds:[ {n:'حديد فيروز (فيروغلوبين)', d:'كبسولة 100مغ', f:'مرة يومياً', dur:'٣ أشهر'},
+           {n:'فيتامين د3', d:'50,000 وحدة', f:'مرة أسبوعياً', dur:'٨ أسابيع'} ],
+    labs:[ {n:'الهيموغلوبين (Hb)', v:'9.8', u:'g/dL', r:'12 – 15.5', f:'lo'},
+           {n:'الفيريتين', v:'8', u:'ng/mL', r:'15 – 150', f:'lo'},
+           {n:'فيتامين د (25-OH)', v:'14', u:'ng/mL', r:'30 – 100', f:'lo'},
+           {n:'كريات الدم البيضاء', v:'6.4', u:'10³/µL', r:'4 – 11', f:'ok'},
+           {n:'الصفائح الدموية', v:'255', u:'10³/µL', r:'150 – 400', f:'ok'} ],
+    note:'مريضة تشكو من إرهاق ودوخة منذ ٣ أسابيع. الفحص السريري ضمن الحدود الطبيعية عدا شحوب الملتحمة. تحاليل تؤكد فقر دم بعوز الحديد ونقص فيتامين د. بدء العلاج التعويضي وإعادة التقييم بعد شهر.' },
+
+  { id:2, tok:'B-13', name:'خالد العتيبي', gender:'ذكر', age:54, mrn:'0998123', blood:'A+', ins:'تأمين تعاوني', phone:'05• ••• 9012',
+    appt:'09:40', complaint:'ارتفاع قراءات السكر المنزلية',
+    allergies:[],
+    vitals:{ bp:'146/92', hr:79, temp:'36.8', spo2:97, rr:17, weight:94, height:175 },
+    dx:[ {n:'داء السكري من النوع الثاني', c:'E11.9', s:'مزمن', t:'blue'}, {n:'ارتفاع ضغط الدم الأساسي', c:'I10', s:'مزمن', t:'blue'} ],
+    meds:[ {n:'ميتفورمين', d:'1000مغ', f:'مرتين يومياً', dur:'مستمر'},
+           {n:'أملوديبين', d:'5مغ', f:'مرة يومياً', dur:'مستمر'} ],
+    labs:[ {n:'السكر التراكمي (HbA1c)', v:'8.6', u:'%', r:'< 7', f:'hi'},
+           {n:'سكر صائم', v:'172', u:'mg/dL', r:'70 – 100', f:'hi'},
+           {n:'الكرياتينين', v:'1.0', u:'mg/dL', r:'0.7 – 1.3', f:'ok'},
+           {n:'الكوليسترول LDL', v:'138', u:'mg/dL', r:'< 100', f:'hi'} ],
+    note:'تحكم غير كافٍ في السكر. رفع جرعة الميتفورمين والتأكيد على الحمية والمشي. متابعة بعد ٦ أسابيع مع إعادة HbA1c.' },
+
+  { id:3, tok:'B-14', name:'نورة الهاجري', gender:'أنثى', age:41, mrn:'1120044', blood:'B+', ins:'الوطنية للتأمين', phone:'05• ••• 3388',
+    appt:'10:00', complaint:'ألم بطني متكرر وانتفاخ',
+    allergies:['الأسبرين'],
+    vitals:{ bp:'118/76', hr:72, temp:'36.9', spo2:99, rr:15, weight:67, height:160 },
+    dx:[ {n:'متلازمة القولون العصبي', c:'K58.9', s:'مزمن', t:'grey'} ],
+    meds:[ {n:'ميبيفيرين', d:'135مغ', f:'٣ مرات يومياً', dur:'٤ أسابيع'} ],
+    labs:[ {n:'كريات الدم البيضاء', v:'7.1', u:'10³/µL', r:'4 – 11', f:'ok'},
+           {n:'CRP', v:'2', u:'mg/L', r:'< 5', f:'ok'},
+           {n:'TSH', v:'2.1', u:'mIU/L', r:'0.4 – 4', f:'ok'} ],
+    note:'أعراض متوافقة مع القولون العصبي دون علامات إنذارية. طمأنة المريضة، تعديل النظام الغذائي ومتابعة حسب الحاجة.' },
+
+  { id:4, tok:'B-15', name:'عبدالعزيز الدوسري', gender:'ذكر', age:63, mrn:'0875510', blood:'O-', ins:'بوبا — فضي', phone:'05• ••• 7763',
+    appt:'10:20', complaint:'ضيق نفس عند المجهود وسعال',
+    allergies:[],
+    vitals:{ bp:'134/84', hr:90, temp:'37.2', spo2:94, rr:20, weight:81, height:172 },
+    dx:[ {n:'الداء الرئوي الانسدادي المزمن', c:'J44.9', s:'مزمن', t:'amber'} ],
+    meds:[ {n:'بخّاخ سالبوتامول', d:'بختان عند اللزوم', f:'حسب الحاجة', dur:'مستمر'},
+           {n:'بخّاخ تيوتروبيوم', d:'بخة واحدة', f:'مرة يومياً', dur:'مستمر'} ],
+    labs:[ {n:'تشبع الأكسجين', v:'94', u:'%', r:'> 95', f:'lo'},
+           {n:'كريات الدم البيضاء', v:'9.8', u:'10³/µL', r:'4 – 11', f:'ok'} ],
+    note:'تفاقم خفيف. تحسين الجرعة الموسّعة للقصبات ونصح بالإقلاع عن التدخين. صورة صدر مطلوبة.' },
+
+  { id:5, tok:'B-16', name:'ليان الشمري', gender:'أنثى', age:23, mrn:'1199870', blood:'AB+', ins:'تأمين تعاوني', phone:'05• ••• 2204',
+    appt:'10:40', complaint:'صداع نصفي متكرر',
+    allergies:[],
+    vitals:{ bp:'114/72', hr:70, temp:'36.7', spo2:99, rr:15, weight:55, height:165 },
+    dx:[ {n:'الشقيقة دون أورة', c:'G43.0', s:'نشط', t:'grey'} ],
+    meds:[ {n:'سوماتريبتان', d:'50مغ', f:'عند النوبة', dur:'حسب الحاجة'} ],
+    labs:[ {n:'الفحوصات', v:'—', u:'', r:'لا يوجد طلبات حديثة', f:'ok'} ],
+    note:'صداع نمطي للشقيقة. وصف علاج النوبة الحادة وتثقيف حول المحفّزات.' },
+];
+
+let currentId = 0;
+const seen = new Set();
+
+function initials(name){ const p=name.trim().split(' '); return (p[0]||'')[0] + (p[1]?p[1][0]:''); }
+function bmi(w,h){ const b = w/Math.pow(h/100,2); return b.toFixed(1); }
+function bmiTag(b){ b=parseFloat(b); if(b<18.5) return ['نقص وزن','lo']; if(b<25) return ['طبيعي','ok']; if(b<30) return ['زيادة وزن','amber']; return ['سمنة','hi']; }
+
+function vCard(label, icon, val, unit, cls){
+  return `<div class="vcard"><div class="vl">${icon}${label}</div><div class="vv ${cls||''}">${val}${unit?`<small>${unit}</small>`:''}</div></div>`;
+}
+const I = {
+  bp:'<svg viewBox="0 0 24 24"><path d="M3 12h4l2-5 3 10 2-5h7"/></svg>',
+  hr:'<svg viewBox="0 0 24 24"><path d="M12 21s-7-4.6-9.2-9C1 8 3 4 7 4c2 0 3.5 1.2 5 3 1.5-1.8 3-3 5-3 4 0 6 4 4.2 8C19 16.4 12 21 12 21z"/></svg>',
+  temp:'<svg viewBox="0 0 24 24"><path d="M10 13V5a2 2 0 014 0v8a4 4 0 11-4 0z"/></svg>',
+  o2:'<svg viewBox="0 0 24 24"><path d="M12 3s5 5.5 5 10a5 5 0 01-10 0c0-4.5 5-10 5-10z"/></svg>',
+  rr:'<svg viewBox="0 0 24 24"><path d="M3 12h3l2-4 3 8 2-6 2 2h6"/></svg>',
+  wt:'<svg viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="13" rx="3"/><path d="M9 7a3 3 0 016 0"/></svg>',
+  ht:'<svg viewBox="0 0 24 24"><path d="M12 3v18M8 6l4-3 4 3M8 18l4 3 4-3"/></svg>',
+  bmi:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 12l4-4"/></svg>'
+};
+
+function renderChart(p){
+  document.getElementById('crumbName').textContent = p.name;
+  const v=p.vitals; const b=bmi(v.weight,v.height); const bt=bmiTag(b);
+  const bpHi = parseInt(v.bp.split('/')[0])>=140 || parseInt(v.bp.split('/')[1])>=90;
+  const allergyBanner = p.allergies.length
+    ? `<div class="allergy"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 2 18a2 2 0 001.7 3h16.6a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>تحسس دوائي: ${p.allergies.join('، ')}</div>`
+    : '';
+
+  const dxRows = p.dx.map(d=>`<div class="row"><div class="grow"><div>${d.n}</div><div class="dx-code num">ICD-10: ${d.c}</div></div><span class="pill ${d.t}">${d.s}</span></div>`).join('');
+  const medRows = p.meds.map(m=>`<div class="row"><div class="grow"><div>${m.n}</div><div class="dx-code">${m.d}</div></div><div style="text-align:left;font-size:12.5px;color:var(--muted)"><div>${m.f}</div><div>${m.dur}</div></div></div>`).join('');
+  const labRows = p.labs.map(l=>{
+    const fl = l.f==='hi'?'<span class="flag hi">مرتفع</span>': l.f==='lo'?'<span class="flag lo">منخفض</span>':'<span class="flag ok">طبيعي</span>';
+    return `<tr><td>${l.n}</td><td class="num">${l.v} ${l.u}</td><td class="num" style="color:var(--muted)">${l.r}</td><td>${l.v==='—'?'':fl}</td></tr>`;
+  }).join('');
+
+  document.getElementById('chart').innerHTML = `
+    <div class="pcard">
+      <div class="phead">
+        <div class="pphoto">${initials(p.name)}</div>
+        <div class="pmeta">
+          <div class="pn">${p.name}
+            <span class="pill grey">${p.gender} · ${p.age} سنة</span>
+            <span class="pill blue">فصيلة ${p.blood}</span>
+            <span class="pill green">في الغرفة الآن</span>
+          </div>
+          <div class="pdetails">
+            <span>رقم الملف: <b class="num">${p.mrn}</b></span>
+            <span>التأمين: <b>${p.ins}</b></span>
+            <span>الجوال: <b class="num" dir="ltr">${p.phone}</b></span>
+            <span>الموعد: <b class="num">${p.appt}</b></span>
+            <span>الشكوى: <b>${p.complaint}</b></span>
+          </div>
+        </div>
+        <div class="pactions">
+          <button class="btn"><svg viewBox="0 0 24 24"><path d="M5 3h14v18l-7-4-7 4z"/></svg>طباعة</button>
+          <button class="btn primary"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>وصفة جديدة</button>
+        </div>
+      </div>
+      ${allergyBanner}
+    </div>
+
+    <div class="section">
+      <div class="shead"><div class="ico"><svg viewBox="0 0 24 24"><path d="M3 12h4l2-5 3 10 2-5h7"/></svg></div><h3>العلامات الحيوية</h3><span class="meta">قياس اليوم · ${p.appt}</span></div>
+      <div class="sbody">
+        <div class="vgrid">
+          ${vCard('ضغط الدم', I.bp, v.bp, 'mmHg', bpHi?'hi':'')}
+          ${vCard('النبض', I.hr, v.hr, 'ن/د', v.hr>100?'hi':'')}
+          ${vCard('الحرارة', I.temp, v.temp, '°م', parseFloat(v.temp)>=38?'hi':'')}
+          ${vCard('تشبّع الأكسجين', I.o2, v.spo2, '%', v.spo2<95?'lo':'')}
+          ${vCard('معدل التنفّس', I.rr, v.rr, 'ن/د', '')}
+          ${vCard('الوزن', I.wt, v.weight, 'كغ', '')}
+          ${vCard('الطول', I.ht, v.height, 'سم', '')}
+          ${vCard('مؤشر الكتلة', I.bmi, b, bt[0], bt[1]==='ok'?'':(bt[1]==='lo'?'lo':'hi'))}
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="shead"><div class="ico"><svg viewBox="0 0 24 24"><path d="M14 3v5h5"/><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg></div><h3>التشخيصات</h3></div>
+      <div class="sbody" style="padding-top:4px;padding-bottom:4px;">${dxRows}</div>
+    </div>
+
+    <div class="section">
+      <div class="shead"><div class="ico"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6"/></svg></div><h3>الأدوية الحالية</h3><span class="meta">${p.meds.length} أدوية</span></div>
+      <div class="sbody" style="padding-top:4px;padding-bottom:4px;">${medRows}</div>
+    </div>
+
+    <div class="section">
+      <div class="shead"><div class="ico"><svg viewBox="0 0 24 24"><path d="M10 3v6l-4.5 8a2 2 0 001.8 3h9.4a2 2 0 001.8-3L14 9V3"/></svg></div><h3>أحدث نتائج المختبر</h3></div>
+      <div class="sbody" style="padding:0;">
+        <table><thead><tr><th>التحليل</th><th>النتيجة</th><th>المعدل الطبيعي</th><th>الحالة</th></tr></thead><tbody>${labRows}</tbody></table>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="shead"><div class="ico"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg></div><h3>ملاحظات الزيارة</h3></div>
+      <div class="sbody">
+        <textarea>${p.note}</textarea>
+        <div class="signrow">
+          <span class="who">الطبيب المعالج: د. سارة العامري — استشاري الباطنة</span>
+          <button class="btn primary"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>حفظ وتوقيع</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderQueue(){
+  const waiting = patients.filter(p=>!seen.has(p.id));
+  document.getElementById('qCount').textContent = waiting.length;
+  document.getElementById('qList').innerHTML = waiting.map(p=>{
+    const isNow = p.id===currentId;
+    return `<div class="qitem ${isNow?'active':''}" onclick="selectPatient(${p.id})">
+      <div class="qtok num">${p.tok}</div>
+      <div class="qinfo">
+        <div class="qn">${p.name}</div>
+        <div class="qsub">${p.gender} · ${p.age} سنة · <span class="num">${p.appt}</span></div>
+      </div>
+      <span class="qstat ${isNow?'now':'wait'}">${isNow?'في الغرفة':'بالانتظار'}</span>
+    </div>`;
+  }).join('') || `<div style="padding:30px 16px;text-align:center;color:var(--muted);font-size:13px;">لا يوجد مرضى في الانتظار</div>`;
+}
+
+function selectPatient(id){
+  currentId = id;
+  const p = patients.find(x=>x.id===id);
+  if(p){ renderChart(p); renderQueue(); document.querySelector('.main').scrollTop=0; }
+}
+function nextPatient(){
+  seen.add(currentId);
+  const waiting = patients.filter(p=>!seen.has(p.id));
+  if(waiting.length){ selectPatient(waiting[0].id); }
+  else { renderQueue(); document.getElementById('chart').innerHTML =
+    `<div class="section"><div class="sbody" style="text-align:center;padding:50px;color:var(--muted)">انتهى طابور اليوم — لا يوجد مرضى في الانتظار.</div></div>`;
+    document.getElementById('crumbName').textContent='—'; }
+}
+
+/* live clock (Gregorian, Arabic) */
+const AR_DAYS=['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+const AR_MON=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+function tick(){
+  const d=new Date();
+  let h=d.getHours(); const ap=h<12?'ص':'م'; let h12=h%12; if(h12===0)h12=12;
+  const mm=String(d.getMinutes()).padStart(2,'0'); const ss=String(d.getSeconds()).padStart(2,'0');
+  document.getElementById('clkT').textContent = `${h12}:${mm}:${ss} ${ap}`;
+  document.getElementById('clkD').textContent = `${AR_DAYS[d.getDay()]} ${d.getDate()} ${AR_MON[d.getMonth()]} ${d.getFullYear()}`;
+}
+setInterval(tick,1000); tick();
+
+/* rail active toggle (cosmetic) */
+document.querySelectorAll('.rail .ri').forEach(r=>r.addEventListener('click',()=>{
+  document.querySelectorAll('.rail .ri').forEach(x=>x.classList.remove('active')); r.classList.add('active');
+}));
+
+selectPatient(0);
+</script>
+</body>
+</html>
